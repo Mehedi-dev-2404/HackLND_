@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from database import tasks_collection, user_collection
+from database import tasks_collection
 from pydantic import BaseModel
 from typing import Optional
 import uuid
@@ -22,16 +22,25 @@ class Task(BaseModel):
     deadline: str
     priority: Optional[int] = 1
 
-class UserState(BaseModel):
-    user_id: str
-    focus_score: float
-
 # --- Task Endpoints ---
 @app.get("/tasks")
 def get_tasks():
     tasks = list(tasks_collection.find({}, {"_id": 0}))
     # Sort by priority (higher stress = urgent tasks first)
     return sorted(tasks, key=lambda x: x.get("priority", 1), reverse=True)
+
+@app.get("/tasks/{task_id}")
+def get_task(task_id: str):
+    task = tasks_collection.find_one({"id": task_id}, {"_id": 0})
+    return task or {"error": "Task not found"}
+
+@app.put("/tasks/{task_id}")
+def update_task(task_id: str, task: Task):
+    tasks_collection.update_one(
+        {"id": task_id},
+        {"$set": task.dict()}
+    )
+    return {"message": "Task updated"}
 
 @app.post("/tasks")
 def create_task(task: Task):

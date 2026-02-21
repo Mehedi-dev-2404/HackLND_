@@ -8,4 +8,3 @@ client = MongoClient(os.getenv("MONGO_URI"))
 db = client["aura"]
 
 tasks_collection = db["tasks"]
-user_collection = db["users"]
