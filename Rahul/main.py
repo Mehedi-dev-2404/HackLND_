@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from database import tasks_collection, user_collection
+from database import tasks_collection
 from pydantic import BaseModel
 from typing import Optional
 import uuid
