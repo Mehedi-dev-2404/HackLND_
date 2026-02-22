@@ -6,6 +6,11 @@ from app.utils.time import utc_now_iso
 class JobRepository:
     _INDEXES = [
         {"keys": [("job_id", 1)], "options": {"unique": True, "name": "uq_job_id"}},
+        {
+            "keys": [("source_url", 1)],
+            "options": {"unique": True, "sparse": True, "name": "uq_source_url_sparse"},
+        },
+        {"keys": [("discovered_at", 1)], "options": {"name": "idx_discovered_at_asc"}},
         {"keys": [("created_at", 1)], "options": {"name": "idx_created_at_asc"}},
         {"keys": [("updated_at", 1)], "options": {"name": "idx_updated_at_asc"}},
     ]
@@ -38,6 +43,11 @@ class JobRepository:
             "module_weight_percent": int(job.module_weight_percent),
             "estimated_hours": int(job.estimated_hours),
             "notes": job.notes,
+            "company": job.company,
+            "location": job.location,
+            "source_url": job.source_url,
+            "match_score": job.match_score,
+            "discovered_at": job.discovered_at or now_iso,
             "updated_at": now_iso,
         }
 
@@ -50,6 +60,11 @@ class JobRepository:
             module_weight_percent=int(row.get("module_weight_percent", 0)),
             estimated_hours=int(row.get("estimated_hours", 0)),
             notes=row.get("notes", ""),
+            company=row.get("company"),
+            location=row.get("location"),
+            source_url=row.get("source_url"),
+            match_score=row.get("match_score"),
+            discovered_at=row.get("discovered_at"),
         )
 
     def list_jobs(self, limit: int = 200) -> list[Job]:

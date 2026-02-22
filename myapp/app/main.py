@@ -1,7 +1,10 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.core.config import (
     SettingsValidationError,
@@ -44,6 +47,11 @@ app.add_middleware(
 
 app.include_router(v1_router, prefix="/api/v1")
 
+repo_root = Path(__file__).resolve().parents[2]
+ui_dir = repo_root / "Mohammed"
+if ui_dir.exists():
+    app.mount("/ui", StaticFiles(directory=str(ui_dir), html=True), name="ui")
+
 
 @app.get("/")
 def root() -> dict:
@@ -52,4 +60,10 @@ def root() -> dict:
         "status": "ok",
         "docs": "/docs",
         "api": "/api/v1",
+        "ui": "/ui/code.html",
     }
+
+
+@app.get("/app")
+def app_ui() -> RedirectResponse:
+    return RedirectResponse(url="/ui/code.html", status_code=307)

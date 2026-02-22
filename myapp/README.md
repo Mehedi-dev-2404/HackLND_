@@ -25,6 +25,11 @@ Required env vars for startup checks:
 - `MONGO_URI`
 - `DB_NAME` (or `JOBS_DB_NAME`) for jobs database
 - `TASKS_DB_NAME` for tasks database
+- `DOCS_DB_NAME` for document metadata + GridFS
+- `DEFAULT_USER_ID` for single-user MVP routing
+- `SCHEDULE_TIMEZONE` for scheduler slots
+- `MAX_UPLOAD_MB` for PDF upload limit
+- `SERPAPI_KEY` (required for LinkedIn discovery endpoints)
 
 Open:
 
@@ -39,6 +44,13 @@ Socratic agent endpoints:
 - `POST /api/v1/socratic/career-analysis`
 - `POST /api/v1/socratic/chunk`
 - `POST /api/v1/socratic/voice`
+
+New integrated endpoints:
+
+- Scheduler: `GET /api/v1/scheduler/events`, `POST /api/v1/scheduler/tasks`, `PATCH /api/v1/scheduler/tasks/{task_id}`, `POST /api/v1/scheduler/reschedule`
+- Documents: `POST /api/v1/documents/lecture-notes/upload`, `POST /api/v1/documents/academic-reports/upload`, `GET /api/v1/documents/lecture-notes`, `GET /api/v1/documents/academic-reports`, `GET /api/v1/documents/{doc_id}/download`
+- Assistant: `POST /api/v1/assistant/chat`
+- Jobs: `POST /api/v1/jobs/discover`, `GET /api/v1/jobs`, `POST /api/v1/jobs/refresh`
 
 ## Notes
 
