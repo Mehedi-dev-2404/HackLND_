@@ -1,0 +1,138 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: #000000;
+  color: #ffffff;
+  font-family: 'JetBrains Mono', monospace;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background-color: #ffffff;
+  color: #000000;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #000000;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #333333;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555555;
+}
+
+/* Animations */
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes fade-in {
+  0% { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.cursor-blink::after {
+  content: '▌';
+  animation: cursor-blink 1s step-end infinite;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out forwards;
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s ease-in-out infinite;
+}
+
+.typewriter-cursor::after {
+  content: '▌';
+  animation: cursor-blink 0.8s step-end infinite;
+  margin-left: 2px;
+}
+
+textarea {
+  resize: none;
+}
+
+textarea:focus, input:focus, button:focus {
+  outline: none;
+}
+
+/* Landing button glow effect */
+.start-btn {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.start-btn:hover {
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+}
+
+.start-btn:active {
+  transform: scale(0.98);
+}
+
+/* Advanced animations */
+@keyframes spin-slow {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes glow-yellow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; text-shadow: 0 0 8px rgba(234, 179, 8, 0.3); }
+}
+
+@keyframes pulse-ultra {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes border-glow {
+  0% { border-color: rgb(55, 65, 81); }
+  50% { border-color: rgb(75, 85, 99); }
+  100% { border-color: rgb(55, 65, 81); }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 3s linear infinite;
+}
+
+.animate-glow-yellow {
+  animation: glow-yellow 2s ease-in-out infinite;
+}
+
+.animate-pulse-ultra {
+  animation: pulse-ultra 1.5s ease-in-out infinite;
+}
+
+.animate-border-glow {
+  animation: border-glow 3s ease-in-out infinite;
+}
