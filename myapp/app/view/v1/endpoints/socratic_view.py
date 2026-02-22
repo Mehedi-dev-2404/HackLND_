@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.dependencies import get_socratic_agent, get_voice_service
 from app.models.schemas.socratic import (
+    AnswerEvaluationRequest,
+    AnswerEvaluationResponse,
     CareerAnalysisRequest,
     CareerAnalysisResponse,
     ChunkRequest,
@@ -30,6 +32,20 @@ def generate_question(
         student_query=request.student_query,
     )
     return SocraticQuestionResponse(**payload)
+
+
+@router.post("/evaluate-answer", response_model=AnswerEvaluationResponse)
+def evaluate_answer(
+    request: AnswerEvaluationRequest,
+    agent: SocraticAgentService = Depends(get_socratic_agent),
+) -> AnswerEvaluationResponse:
+    payload = agent.evaluate_answer(
+        topic=request.topic,
+        question=request.question,
+        answer=request.answer,
+        reference_text=request.reference_text,
+    )
+    return AnswerEvaluationResponse(**payload)
 
 
 @router.post("/integrity-check", response_model=IntegrityCheckResponse)

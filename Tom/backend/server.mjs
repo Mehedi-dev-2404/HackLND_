@@ -6,7 +6,6 @@ import {
   writeFileSync
 } from "node:fs";
 import path from "node:path";
-import { spawn } from "node:child_process";
 
 function loadEnvFile(envPath) {
   if (!existsSync(envPath)) return;
@@ -52,9 +51,9 @@ const FASTAPI_BASE_URL = normalizeBaseUrl(
 const DATA_DIR = path.resolve(process.cwd(), "backend", "data");
 const LATEST_RESULT_FILE = path.join(DATA_DIR, "llm_priority_latest.json");
 const PIPELINE_MOCK_FILE = path.resolve(process.cwd(), "backend", "pipeline_mock_data.json");
-const REPO_ROOT = path.resolve(process.cwd(), "..");
-const LINKEDIN_SCRAPER_SCRIPT = path.join(REPO_ROOT, "linkedin_scrappers.py");
-const LINKEDIN_SESSION_FILE = path.join(REPO_ROOT, "linkedin_session.json");
+const GEMINI_JOB_SEARCH_MODEL = String(
+  process.env.GEMINI_JOB_SEARCH_MODEL || process.env.LLM_MODEL || "gemini-2.5-flash"
+).trim();
 
 function setCors(res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -145,6 +144,74 @@ function parseJsonText(rawText) {
     .replace(/^```\s*/i, "")
     .replace(/```\s*$/i, "");
   return JSON.parse(fenced);
+}
+
+function normalizeGeminiLinkedInJobs(parsed, { keywords, location, limit }) {
+  const rawItems = Array.isArray(parsed?.jobs)
+    ? parsed.jobs
+    : Array.isArray(parsed?.items)
+      ? parsed.items
+      : Array.isArray(parsed)
+        ? parsed
+        : [];
+
+  const jobs = rawItems
+    .slice(0, Math.max(1, Number(limit) || 5))
+    .map((item, index) => {
+      const title = String(item?.title || item?.role || "Unknown Title");
+      const company = String(item?.company || item?.company_name || "Unknown Company");
+      const itemLocation = String(item?.location || location || "Remote");
+      const url = String(item?.url || item?.link || "").trim();
+      return {
+        id: String(item?.id || `linkedin-llm-${index + 1}`),
+        title,
+        company,
+        location: itemLocation,
+        postedDate: String(item?.postedDate || item?.posted_date || item?.date || ""),
+        applicantCount: String(item?.applicantCount || item?.applicant_count || ""),
+        url: url.startsWith("http") ? url : "",
+        description: String(item?.description || item?.summary || "")
+      };
+    })
+    .filter((job) => Boolean(job.title));
+
+  return {
+    source: "linkedin-gemini",
+    query: { keywords, location, limit: Math.max(1, Number(limit) || 5) },
+    jobCount: jobs.length,
+    jobs,
+    summary: String(parsed?.summary || parsed?.note || `Found ${jobs.length} LinkedIn jobs`)
+  };
+}
+
+function buildGeminiLinkedInJobsPrompt({ keywords, location, limit }) {
+  return `Find current job opportunities on LinkedIn.
+Return up to ${Math.max(1, Number(limit) || 5)} roles for this query:
+- keywords: ${keywords}
+- location: ${location}
+
+Rules:
+1) Only include jobs that are likely to exist on LinkedIn.
+2) Prefer recent openings.
+3) If exact posting date/applicant count is unavailable, use empty string.
+4) Return JSON only (no markdown).
+
+Required JSON shape:
+{
+  "summary": "short summary",
+  "jobs": [
+    {
+      "id": "string",
+      "title": "string",
+      "company": "string",
+      "location": "string",
+      "postedDate": "string",
+      "applicantCount": "string",
+      "url": "https://www.linkedin.com/jobs/view/...",
+      "description": "string"
+    }
+  ]
+}`;
 }
 
 function buildGeminiPriorityPrompt(tasks, llmConfig = {}) {
@@ -253,6 +320,68 @@ async function callGeminiPriorityDirect(tasks, llmConfig = {}) {
   return normalizeGeminiRatedTasks(parsed, tasks);
 }
 
+async function callGeminiLinkedInJobs({ keywords, location, limit, llmConfig = {} }) {
+  const apiKey = String(llmConfig.apiKey || process.env.GEMINI_API_KEY || "").trim();
+  if (!apiKey) {
+    throw new Error(
+      "No Gemini API key available for LinkedIn job finding. " +
+        "Provide llmConfig.apiKey or set GEMINI_API_KEY in Tom/.env or myapp/.env"
+    );
+  }
+
+  const rawModel = String(llmConfig.model || GEMINI_JOB_SEARCH_MODEL || "gemini-2.5-flash").trim();
+  const model = rawModel.replace(/^models\//i, "");
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
+    model
+  )}:generateContent?key=${encodeURIComponent(apiKey)}`;
+
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              text: buildGeminiLinkedInJobsPrompt({
+                keywords: String(keywords || "software engineer"),
+                location: String(location || "Remote"),
+                limit: Math.max(1, Number(limit) || 5)
+              })
+            }
+          ]
+        }
+      ],
+      generationConfig: {
+        temperature: Number(llmConfig.temperature ?? 0.2),
+        responseMimeType: "application/json"
+      }
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Gemini HTTP ${response.status}`);
+  }
+
+  const data = await response.json();
+  const content = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!content) {
+    throw new Error("Gemini response missing content");
+  }
+
+  const parsed = parseJsonText(content);
+  return {
+    ...normalizeGeminiLinkedInJobs(parsed, {
+      keywords: String(keywords || "software engineer"),
+      location: String(location || "Remote"),
+      limit: Math.max(1, Number(limit) || 5)
+    }),
+    provider: "gemini-direct",
+    model
+  };
+}
+
 function toCamelAssignment(item) {
   return {
     title: item.title,
@@ -325,61 +454,6 @@ async function callFastApi(pathname, method = "GET", payload = undefined) {
   }
 
   return parsed;
-}
-
-function runPythonLinkedInScraper({ keywords, location, limit }) {
-  const args = [
-    LINKEDIN_SCRAPER_SCRIPT,
-    "--keywords",
-    String(keywords || "software engineer"),
-    "--location",
-    String(location || ""),
-    "--limit",
-    String(Math.max(1, Number(limit) || 5)),
-    "--session-path",
-    LINKEDIN_SESSION_FILE,
-    "--json"
-  ];
-
-  return new Promise((resolve, reject) => {
-    const proc = spawn("python3", args, {
-      cwd: REPO_ROOT,
-      stdio: ["ignore", "pipe", "pipe"]
-    });
-
-    let stdout = "";
-    let stderr = "";
-
-    proc.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
-    });
-    proc.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
-    });
-
-    proc.on("error", (error) => {
-      reject(error);
-    });
-
-    proc.on("close", (code) => {
-      const cleaned = String(stdout || "").trim();
-      if (!cleaned) {
-        reject(new Error(`LinkedIn scraper returned no output (code=${code}): ${stderr}`));
-        return;
-      }
-
-      try {
-        const parsed = JSON.parse(cleaned);
-        if (code !== 0 && !parsed.jobs) {
-          reject(new Error(parsed.error || stderr || `LinkedIn scraper failed (code=${code})`));
-          return;
-        }
-        resolve(parsed);
-      } catch {
-        reject(new Error(`Invalid JSON from LinkedIn scraper: ${cleaned.slice(0, 300)}`));
-      }
-    });
-  });
 }
 
 const server = createServer(async (req, res) => {
@@ -506,24 +580,29 @@ const server = createServer(async (req, res) => {
       const keywords = String(body.keywords || "software engineer");
       const location = String(body.location || "Remote");
       const limit = Math.max(1, Number(body.limit) || 5);
+      const llmConfig = body.llmConfig || {};
 
-      const payload = await runPythonLinkedInScraper({
+      const payload = await callGeminiLinkedInJobs({
         keywords,
         location,
-        limit
+        limit,
+        llmConfig
       });
 
       const jobs = Array.isArray(payload.jobs) ? payload.jobs : [];
       sendJson(res, 200, {
         mode: "live",
-        source: "linkedin-live",
+        source: "linkedin-gemini",
         query: { keywords, location, limit },
+        provider: payload.provider || "gemini-direct",
+        model: payload.model || GEMINI_JOB_SEARCH_MODEL,
+        summary: payload.summary || "",
         jobCount: jobs.length,
         jobs
       });
     } catch (error) {
       sendJson(res, 502, {
-        error: `LinkedIn live scraping failed: ${error.message}`
+        error: `LinkedIn Gemini job search failed: ${error.message}`
       });
     }
     return;

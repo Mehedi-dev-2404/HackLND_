@@ -43,6 +43,7 @@ class TaskRepository:
             "estimated_hours": int(task.estimated_hours),
             "priority_score": int(task.priority_score),
             "priority_band": task.priority_band,
+            "completed": bool(task.completed),
             "notes": task.notes,
             "updated_at": now_iso,
         }
@@ -57,6 +58,7 @@ class TaskRepository:
             estimated_hours=int(row.get("estimated_hours", 0)),
             priority_score=int(row.get("priority_score", 0)),
             priority_band=row.get("priority_band", "low"),
+            completed=bool(row.get("completed", False)),
             notes=row.get("notes", ""),
         )
 

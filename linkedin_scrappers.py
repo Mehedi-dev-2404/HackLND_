@@ -10,9 +10,6 @@ from pathlib import Path
 from typing import Any
 
 from create_sessions import create_session_file
-from linkedin_scraper.core.browser import BrowserManager
-from linkedin_scraper.scrapers.job import JobScraper
-from linkedin_scraper.scrapers.job_search import JobSearchScraper
 
 
 def _job_to_dict(job: Any, index: int, url: str) -> dict:
@@ -36,6 +33,16 @@ async def find_jobs(
     headless: bool = True,
     auto_create_session: bool = False,
 ) -> dict:
+    try:
+        from linkedin_scraper.core.browser import BrowserManager
+        from linkedin_scraper.scrapers.job import JobScraper
+        from linkedin_scraper.scrapers.job_search import JobSearchScraper
+    except Exception as exc:
+        raise RuntimeError(
+            "Missing LinkedIn scraper dependencies. Install with: "
+            "pip install linkedin-jobs-scraper playwright && playwright install chromium"
+        ) from exc
+
     normalized_limit = max(1, int(limit))
     session_file = Path(session_path)
 
@@ -47,20 +54,32 @@ async def find_jobs(
             )
         await create_session_file(session_path=session_path)
 
-    async with BrowserManager(headless=headless) as browser:
-        await browser.load_session(session_path)
-        search_scraper = JobSearchScraper(browser.page)
-        job_urls = await search_scraper.search(
-            keywords=keywords,
-            location=location,
-            limit=normalized_limit,
-        )
+    jobs: list[dict] = []
+    last_error: Exception | None = None
+    for current_headless in ([headless, False] if headless else [headless]):
+        try:
+            async with BrowserManager(headless=current_headless) as browser:
+                await browser.load_session(session_path)
+                search_scraper = JobSearchScraper(browser.page)
+                job_urls = await search_scraper.search(
+                    keywords=keywords,
+                    location=location,
+                    limit=normalized_limit,
+                )
 
-        job_scraper = JobScraper(browser.page)
-        jobs = []
-        for index, job_url in enumerate(job_urls[:normalized_limit], start=1):
-            job = await job_scraper.scrape(job_url)
-            jobs.append(_job_to_dict(job=job, index=index, url=job_url))
+                job_scraper = JobScraper(browser.page)
+                for index, job_url in enumerate(job_urls[:normalized_limit], start=1):
+                    job = await job_scraper.scrape(job_url)
+                    jobs.append(_job_to_dict(job=job, index=index, url=job_url))
+            break
+        except Exception as exc:
+            last_error = exc
+            jobs = []
+            if not current_headless:
+                break
+
+    if last_error is not None and not jobs:
+        raise RuntimeError(str(last_error))
 
     return {
         "source": "linkedin",

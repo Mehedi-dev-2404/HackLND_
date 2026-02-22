@@ -10,6 +10,7 @@ class TaskSchema(BaseModel):
     estimated_hours: int = 0
     priority_score: int = 0
     priority_band: str = "low"
+    completed: bool = False
     notes: str = ""
     created_at: str | None = None
     updated_at: str | None = None
