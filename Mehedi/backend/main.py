@@ -10,7 +10,7 @@ from intelligence.socratic_engine import socratic_viva
 from intelligence.career_matcher import analyze_career_match
 
 app = FastAPI(
-    title="Aura - AI Student OS",
+    title="Beacon - AI Student OS",
     description="UK-focused AI educational platform",
     version="1.0.0"
 )
@@ -40,7 +40,7 @@ class CareerAnalysisResponse(BaseModel):
 @app.get("/")
 async def root():
     return {
-        "service": "Aura AI Student OS",
+        "service": "Beacon AI Student OS",
         "status": "operational",
         "endpoints": ["/socratic", "/career-analysis"]
     }
