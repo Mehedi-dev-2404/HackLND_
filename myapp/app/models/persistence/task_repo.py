@@ -10,6 +10,8 @@ class TaskRepository:
             "keys": [("priority_score", 1)],
             "options": {"name": "idx_priority_score_asc"},
         },
+        {"keys": [("due_at", 1)], "options": {"name": "idx_due_at_asc"}},
+        {"keys": [("completed", 1)], "options": {"name": "idx_completed_asc"}},
         {"keys": [("created_at", 1)], "options": {"name": "idx_created_at_asc"}},
         {"keys": [("updated_at", 1)], "options": {"name": "idx_updated_at_asc"}},
     ]
@@ -33,17 +35,36 @@ class TaskRepository:
         else:
             self.collection = collection
 
+    def _as_int(self, value: object, default: int = 0) -> int:
+        try:
+            return int(value)  # type: ignore[arg-type]
+        except Exception:
+            return int(default)
+
+    def _as_bool(self, value: object) -> bool:
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, (int, float)):
+            return bool(value)
+        if isinstance(value, str):
+            lowered = value.strip().lower()
+            if lowered in {"1", "true", "yes", "on"}:
+                return True
+            if lowered in {"0", "false", "no", "off", ""}:
+                return False
+        return bool(value)
+
     def _to_doc(self, task: Task, now_iso: str) -> dict:
         return {
             "task_id": task.id,
             "title": task.title,
             "module": task.module,
             "due_at": task.due_at,
-            "module_weight_percent": int(task.module_weight_percent),
-            "estimated_hours": int(task.estimated_hours),
-            "priority_score": int(task.priority_score),
+            "module_weight_percent": self._as_int(task.module_weight_percent, default=0),
+            "estimated_hours": self._as_int(task.estimated_hours, default=0),
+            "priority_score": self._as_int(task.priority_score, default=0),
             "priority_band": task.priority_band,
-            "completed": bool(task.completed),
+            "completed": self._as_bool(task.completed),
             "notes": task.notes,
             "updated_at": now_iso,
         }
@@ -54,11 +75,11 @@ class TaskRepository:
             title=row.get("title", ""),
             module=row.get("module", "General"),
             due_at=row.get("due_at"),
-            module_weight_percent=int(row.get("module_weight_percent", 0)),
-            estimated_hours=int(row.get("estimated_hours", 0)),
-            priority_score=int(row.get("priority_score", 0)),
+            module_weight_percent=self._as_int(row.get("module_weight_percent", 0), default=0),
+            estimated_hours=self._as_int(row.get("estimated_hours", 0), default=0),
+            priority_score=self._as_int(row.get("priority_score", 0), default=0),
             priority_band=row.get("priority_band", "low"),
-            completed=bool(row.get("completed", False)),
+            completed=self._as_bool(row.get("completed", False)),
             notes=row.get("notes", ""),
         )
 

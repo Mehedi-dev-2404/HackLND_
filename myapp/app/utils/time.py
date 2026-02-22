@@ -7,10 +7,16 @@ def utc_now_iso() -> str:
 
 
 
-def parse_iso(value: str) -> datetime | None:
+def parse_iso(value: str | None) -> datetime | None:
+    if not value:
+        return None
     try:
         normalized = value.replace("Z", "+00:00")
-        return datetime.fromisoformat(normalized)
+        parsed = datetime.fromisoformat(normalized)
+        if parsed.tzinfo is None:
+            # Treat naive timestamps as UTC to avoid offset-naive/aware arithmetic errors.
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed
     except Exception:
         return None
 
