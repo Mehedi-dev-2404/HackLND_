@@ -1,4 +1,3 @@
-# seed.py — run this once: python seed.py
 from database import tasks_collection
 
 demo_tasks = [

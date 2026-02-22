@@ -8,7 +8,7 @@ import datetime
 
 app = FastAPI()
 
-# This lets the frontend talk to your backend
+# Lets frontend talk to backend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -16,19 +16,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- Data Models ---
+# Data
 class Task(BaseModel):
     title: str
     subject: str
     deadline: str
     priority: Optional[int] = 1
 
-# --- Task Endpoints ---
+# Endpoints
 @app.get("/tasks")
 def get_tasks():
     tasks = list(tasks_collection.find({}, {"_id": 0}))
-    # Sort by priority (higher stress = urgent tasks first)
-    return sorted(tasks, key=lambda x: x.get("priority", 1), reverse=True)
+    return sorted(tasks, key=lambda x: x.get("priority", 1), reverse=True) # Sorts by priority
 
 @app.get("/tasks/{task_id}")
 def get_task(task_id: str):
@@ -55,7 +54,7 @@ def delete_task(task_id: str):
     tasks_collection.delete_one({"id": task_id})
     return {"message": "Task deleted"}
 
-# --- Health check ---
+# Health check
 @app.get("/")
 def root():
     return {"status": "Aura backend running!"}
