@@ -278,7 +278,12 @@ export default function useMember4ViewModel() {
         baseUrl: apiBaseUrl,
         keywords: jobKeywords,
         location: jobLocation,
-        limit: Number(jobLimit)
+        limit: Number(jobLimit),
+        llmConfig: {
+          model: llmModel,
+          apiKey: llmApiKey,
+          temperature: Number(llmTemperature)
+        }
       });
       setDataStore((current) => ({ ...current, jobs: result.data }));
       const resolvedMode = result.data?.mode || result.mode;

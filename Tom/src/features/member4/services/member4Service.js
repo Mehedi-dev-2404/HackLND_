@@ -403,14 +403,14 @@ const MOCK_LOAD_DATA_RESPONSE = {
         {
           title: "Macroeconomics Essay Draft",
           module: "Economics",
-          due_at: null,
+          due_at: "2026-02-23T16:00:00Z",
           module_weight_percent: 40,
           estimated_hours: 6
         },
         {
           title: "Business Strategy Presentation",
           module: "Business",
-          due_at: null,
+          due_at: "2026-02-25T16:00:00Z",
           module_weight_percent: 50,
           estimated_hours: 8
         }
@@ -437,12 +437,23 @@ export async function runLoadData({ baseUrl, rawHtml = "" }) {
   });
 }
 
-export async function runLoadJobs({ baseUrl, keywords, location, limit }) {
+export async function runLoadJobs({
+  baseUrl,
+  keywords,
+  location,
+  limit,
+  llmConfig = {}
+}) {
   const data = await postJson(baseUrl, "/member4/load-jobs", {
     keywords,
     location,
-    limit
-  }, { timeoutMs: 120000 });
+    limit,
+    llmConfig: {
+      model: llmConfig.model,
+      apiKey: llmConfig.apiKey,
+      temperature: llmConfig.temperature
+    }
+  }, { timeoutMs: 300000 });
   return {
     mode: String(data?.mode || "live"),
     data

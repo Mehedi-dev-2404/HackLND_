@@ -25,6 +25,21 @@ class SocraticQuestionResponse(BaseModel):
     integrity: IntegrityCheckResponse | None = None
 
 
+class AnswerEvaluationRequest(BaseModel):
+    topic: str = Field(..., min_length=1)
+    question: str = Field(..., min_length=1)
+    answer: str = Field(..., min_length=1)
+    reference_text: str | None = None
+
+
+class AnswerEvaluationResponse(BaseModel):
+    score: int = Field(..., ge=0, le=100)
+    comments: str
+    strengths: list[str]
+    improvements: list[str]
+    fallback: bool = False
+
+
 class CareerAnalysisRequest(BaseModel):
     job_text: str = Field(..., min_length=10)
 

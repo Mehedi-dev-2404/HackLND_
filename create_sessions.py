@@ -3,8 +3,6 @@
 
 import asyncio
 
-from linkedin_scraper import BrowserManager, wait_for_manual_login
-
 
 async def create_session_file(
     session_path: str = "linkedin_session.json",
@@ -17,6 +15,18 @@ async def create_session_file(
     print("A browser window will open. Log in manually to save a reusable session.")
     print(f"Target output: {session_path}")
     print(f"Timeout: {timeout_ms} ms")
+
+    try:
+        from linkedin_scraper.core.browser import BrowserManager
+        try:
+            from linkedin_scraper import wait_for_manual_login
+        except Exception:
+            from linkedin_scraper.utils import wait_for_manual_login
+    except Exception as exc:
+        raise RuntimeError(
+            "Missing LinkedIn session dependencies. Install with: "
+            "pip install linkedin-jobs-scraper playwright && playwright install chromium"
+        ) from exc
 
     async with BrowserManager(headless=False) as browser:
         print("Opening LinkedIn login page...")

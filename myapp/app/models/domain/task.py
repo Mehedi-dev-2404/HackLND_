@@ -14,6 +14,7 @@ class Task:
     module_weight_percent: int = 0
     estimated_hours: int = 0
     priority_band: str = "low"
+    completed: bool = False
     notes: str = ""
 
     def __post_init__(self) -> None:
@@ -30,3 +31,4 @@ class Task:
         if self.priority_score is None:
             self.priority_score = int(self.priority)
         self.priority = int(self.priority_score)
+        self.completed = bool(self.completed)

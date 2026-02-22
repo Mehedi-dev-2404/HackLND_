@@ -32,6 +32,29 @@ def test_integrity_check_blocks_direct_assignment_completion() -> None:
     assert body["severity"] in {"high", "medium"}
 
 
+def test_evaluate_answer_returns_score_and_comments() -> None:
+    payload = {
+        "topic": "Variables in Python",
+        "question": "What is a variable and why is it useful?",
+        "answer": (
+            "A variable is a named container for data. It is useful because "
+            "it lets us store values and reuse them in calculations and logic."
+        ),
+    }
+
+    response = client.post("/api/v1/socratic/evaluate-answer", json=payload)
+    assert response.status_code == 200
+
+    body = response.json()
+    assert isinstance(body["score"], int)
+    assert 0 <= body["score"] <= 100
+    assert isinstance(body["comments"], str)
+    assert len(body["comments"]) > 0
+    assert isinstance(body["strengths"], list)
+    assert isinstance(body["improvements"], list)
+    assert "fallback" in body
+
+
 def test_career_analysis_returns_expected_schema() -> None:
     payload = {
         "job_text": (

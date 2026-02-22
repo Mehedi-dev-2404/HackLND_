@@ -29,6 +29,7 @@ cp .env.example .env
 2. Configure `.env`:
 - `PORT=8010`
 - `FASTAPI_BASE_URL=http://127.0.0.1:8000`
+- `GEMINI_API_KEY=...`
 
 3. Run FastAPI backend (terminal 1):
 
@@ -59,6 +60,15 @@ Health check:
 ```bash
 curl http://127.0.0.1:8010/health
 ```
+
+## LinkedIn Jobs via Gemini (`Load Jobs`)
+
+`Load Jobs` now uses Gemini directly to return LinkedIn-style job results in structured JSON.
+
+1. Set `GEMINI_API_KEY` in `Tom/.env` (or `myapp/.env`).
+2. Optionally set `GEMINI_JOB_SEARCH_MODEL` in `Tom/.env`.
+3. Restart `npm run dev:backend`.
+4. Click `Load Jobs`.
 
 ## Hackathon Structure Choice
 
@@ -126,8 +136,8 @@ If any call fails, the UI automatically switches to mock mode so demo flow still
 ## New One-Click Actions
 
 - `Load Data`: loads `backend/pipeline_mock_data.json` and runs FastAPI `/api/v1/workflow/run`.
-- `Load Jobs`: runs LinkedIn finder via `../linkedin_scrappers.py` using query fields (keywords, location, limit).
-- If LinkedIn session/scraping fails, the backend returns query-shaped mock job results.
+- `Load Jobs`: uses Gemini API to return LinkedIn job data from query fields (keywords, location, limit).
+- If Gemini fails (for example missing API key), the backend returns an error with setup hints.
 
 ## LLM Priority Tuning
 
